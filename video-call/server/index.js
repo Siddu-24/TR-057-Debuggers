@@ -37,7 +37,7 @@ db.serialize(() => {
 });
 
 // Secret for JWT
-const JWT_SECRET = "signspeak_secret_2026_vision_bridge";
+const JWT_SECRET = process.env.JWT_SECRET || "fallback_secret";
 
 // --- AUTH ENDPOINTS ---
 
@@ -48,7 +48,7 @@ app.post('/api/auth/register', async (req, res) => {
 
     try {
         const hashedPassword = await bcrypt.hash(password, 10);
-        db.run(`INSERT INTO users (email, password) VALUES (?, ?)`, [email, hashedPassword], function(err) {
+        db.run(`INSERT INTO users (email, password) VALUES (?, ?)`, [email, hashedPassword], function (err) {
             if (err) {
                 if (err.message.includes('UNIQUE')) return res.status(400).json({ error: "Email already registered" });
                 return res.status(500).json({ error: "Database error" });
@@ -83,15 +83,15 @@ app.post('/api/auth/request-reset', (req, res) => {
     const { email } = req.body;
     db.get(`SELECT * FROM users WHERE email = ?`, [email], (err, user) => {
         if (!user) return res.status(404).json({ error: "Identity not found" });
-        
+
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
         otpStore[email] = otp;
-        
+
         console.log("-----------------------------------------");
         console.log(`🔐 SECURITY ALERT: Reset Code for ${email}`);
         console.log(`CODE: ${otp}`);
         console.log("-----------------------------------------");
-        
+
         res.json({ success: true, message: "Verification code sent to terminal" });
     });
 });
@@ -99,13 +99,13 @@ app.post('/api/auth/request-reset', (req, res) => {
 // 4. Verify & Update Password
 app.post('/api/auth/reset', async (req, res) => {
     const { email, otp, newPassword } = req.body;
-    
+
     if (otpStore[email] !== otp) {
         return res.status(401).json({ error: "Invalid Verification Code" });
     }
 
     const hashedPassword = await bcrypt.hash(newPassword, 10);
-    db.run(`UPDATE users SET password = ? WHERE email = ?`, [hashedPassword, email], function(err) {
+    db.run(`UPDATE users SET password = ? WHERE email = ?`, [hashedPassword, email], function (err) {
         if (err) return res.status(500).json({ error: "Database error" });
         delete otpStore[email]; // Clear OTP after use
         res.json({ success: true });
@@ -151,7 +151,7 @@ const authenticateToken = (req, res, next) => {
 app.get('/api/recordings', authenticateToken, (req, res) => {
     const dir = './recordings';
     if (!fs.existsSync(dir)) return res.json([]);
-    
+
     // Filter by user email if provided in metadata (simulated here by filename prefix if we wanted, 
     // but for now we'll show all logs authorized for this user's 'identity branch')
     const files = fs.readdirSync(dir)
@@ -173,7 +173,7 @@ app.get('/api/recordings', authenticateToken, (req, res) => {
 app.delete('/api/recordings/:filename', authenticateToken, (req, res) => {
     const filename = req.params.filename;
     const filePath = path.join(__dirname, 'recordings', filename);
-    
+
     if (fs.existsSync(filePath)) {
         fs.unlinkSync(filePath);
         res.json({ success: true });
@@ -190,12 +190,12 @@ app.post('/api/upload', authenticateToken, upload.single('video'), (req, res) =>
 app.post('/api/transcripts', authenticateToken, (req, res) => {
     const { message, session_id } = req.body;
     const user_email = req.user.email;
-    
-    db.run(`INSERT INTO transcripts (user_email, session_id, message) VALUES (?, ?, ?)`, 
+
+    db.run(`INSERT INTO transcripts (user_email, session_id, message) VALUES (?, ?, ?)`,
         [user_email, session_id, message], (err) => {
-        if (err) return res.status(500).json({ error: "Storage failure" });
-        res.json({ success: true });
-    });
+            if (err) return res.status(500).json({ error: "Storage failure" });
+            res.json({ success: true });
+        });
 });
 
 app.get('/api/transcripts', authenticateToken, (req, res) => {
@@ -210,12 +210,12 @@ app.get('/api/transcripts/export', authenticateToken, (req, res) => {
     const user_email = req.user.email;
     db.all(`SELECT * FROM transcripts WHERE user_email = ? ORDER BY timestamp DESC`, [user_email], (err, rows) => {
         if (err) return res.status(500).json({ error: "Retrieval failure" });
-        
+
         let csv = "ID,Session,Message,Timestamp\n";
         rows.forEach(row => {
             csv += `${row.id},${row.session_id},"${row.message}",${row.timestamp}\n`;
         });
-        
+
         res.setHeader('Content-Type', 'text/csv');
         res.setHeader('Content-Disposition', 'attachment; filename=signspeak_history.csv');
         res.send(csv);
@@ -223,11 +223,11 @@ app.get('/api/transcripts/export', authenticateToken, (req, res) => {
 });
 
 const server = http.createServer(app);
-const io = socketIo(server, { 
-    cors: { 
-        origin: "*", 
-        methods: ["GET", "POST"] 
-    } 
+const io = socketIo(server, {
+    cors: {
+        origin: "*",
+        methods: ["GET", "POST"]
+    }
 });
 
 io.on('connection', (socket) => {
