@@ -11,31 +11,18 @@ const jwt = require('jsonwebtoken');
 
 const app = express();
 
-// --- CORS CONFIG (Production) ---
-const allowedOrigins = [
-    "https://tr-057-debuggers.vercel.app",
-    "http://localhost:5500",
-    "http://127.0.0.1:5500",
-    "http://localhost:3000",
-    "http://127.0.0.1:3000"
-];
-
-app.use(cors({
-    origin: (origin, callback) => {
-        // Allow requests with no origin (Postman, curl, mobile apps)
-        if (!origin || allowedOrigins.includes(origin)) {
-            callback(null, true);
-        } else {
-            callback(new Error(`CORS blocked: ${origin}`));
-        }
-    },
+// --- CORS CONFIG (Production — Bulletproof) ---
+const corsOptions = {
+    origin: true,  // Mirror request origin — works with all domains + credentials
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
-    credentials: true
-}));
+    credentials: true,
+    optionsSuccessStatus: 200  // Some browsers (IE11) choke on 204
+};
 
-// Handle preflight OPTIONS for all routes
-app.options("*", cors());
+// Apply CORS before everything else
+app.use(cors(corsOptions));
+app.options("*", cors(corsOptions));  // Handle ALL preflight requests
 
 app.use(express.json());
 
@@ -250,11 +237,7 @@ app.get('/api/transcripts/export', authenticateToken, (req, res) => {
 
 const server = http.createServer(app);
 const io = socketIo(server, {
-    cors: {
-        origin: allowedOrigins,
-        methods: ["GET", "POST"],
-        credentials: true
-    }
+    cors: corsOptions
 });
 
 // Map to track active users: email -> socketId
