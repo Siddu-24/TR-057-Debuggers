@@ -1,6 +1,6 @@
-const BACKEND_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
-    ? 'http://localhost:5000' 
-    : 'https://signspeak-server.onrender.com'; // REPLACE THIS LATER
+const BACKEND_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+    ? 'http://localhost:5000'
+    : 'https://tr-057-debuggers.onrender.com'; // REPLACE THIS LATER
 
 // --- IDENTITY CONTROLLER (Auth Engine) ---
 const Auth = {
@@ -29,14 +29,14 @@ const Auth = {
         document.getElementById('send-otp-btn').onclick = async () => {
             const email = document.getElementById('reset-email').value;
             if (!email) return alert("Please specify the unit email.");
-            
+
             const res = await fetch(BACKEND_URL + '/api/auth/request-reset', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email })
             });
             const data = await res.json();
-            
+
             if (data.success) {
                 alert("Security Code Generated. Please verify in Terminal.");
                 document.getElementById('otp-section').style.display = 'block';
@@ -59,7 +59,7 @@ const Auth = {
         this.loginView.style.display = view === 'login' ? 'block' : 'none';
         this.registerView.style.display = view === 'register' ? 'block' : 'none';
         this.resetView.style.display = view === 'reset' ? 'block' : 'none';
-        
+
         // Reset recovery state when switching back
         if (view === 'reset') {
             document.getElementById('otp-section').style.display = 'none';
@@ -78,10 +78,10 @@ const Auth = {
             body = { email: document.getElementById('login-email').value, password: document.getElementById('login-pass').value };
         } else {
             endpoint = '/api/auth/reset';
-            body = { 
-                email: document.getElementById('reset-email').value, 
+            body = {
+                email: document.getElementById('reset-email').value,
                 otp: document.getElementById('reset-otp').value,
-                newPassword: document.getElementById('reset-new-pass').value 
+                newPassword: document.getElementById('reset-new-pass').value
             };
         }
 
@@ -121,7 +121,7 @@ Auth.init();
 console.log("SignSpeak Engine Script Loaded.");
 
 // Auto-connect with optimized transports
-let socket = null; 
+let socket = null;
 
 // Global State
 let me = null;
@@ -165,7 +165,7 @@ const updateStatus = (text, color = "#00f2fe") => {
         bar.innerText = text;
         bar.style.color = color;
         bar.dataset.lastText = text; // Store for comparison
-        
+
         // --- ADD TO INTELLIGENCE LOG ---
         if (color !== "red") { // Don't log errors
             addToIntelligenceLog(text);
@@ -177,7 +177,7 @@ const updateStatus = (text, color = "#00f2fe") => {
 function addToIntelligenceLog(message) {
     const container = document.getElementById('transcript-container');
     if (!container) return;
-    
+
     const timestamp = new Date().toLocaleTimeString();
     sessionTranscript.push({ time: timestamp, msg: message });
 
@@ -192,12 +192,12 @@ function addToIntelligenceLog(message) {
 async function saveTranscriptToServer(message) {
     const token = localStorage.getItem('unit_token');
     if (!token) return;
-    
+
     await fetch(BACKEND_URL + '/api/transcripts', {
         method: 'POST',
-        headers: { 
+        headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}` 
+            'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({ message, session_id: currentSessionId })
     });
@@ -206,7 +206,7 @@ async function saveTranscriptToServer(message) {
 // --- INITIALIZATION ---
 async function startApp() {
     console.log("Initializing Terminal Components...");
-    
+
     // 1. DOM Element Cache
     const el = {
         myVideo: document.getElementById('my-video'),
@@ -280,7 +280,7 @@ async function startApp() {
                     lms.forEach(pt => {
                         ctx.fillStyle = "#00f2fe";
                         ctx.beginPath();
-                        ctx.arc(pt.x * el.canvas.width, pt.y * el.canvas.height, 3, 0, 2*Math.PI);
+                        ctx.arc(pt.x * el.canvas.width, pt.y * el.canvas.height, 3, 0, 2 * Math.PI);
                         ctx.fill();
                     });
 
@@ -308,7 +308,7 @@ async function startApp() {
             height: 480
         });
         camera.start();
-        
+
         // --- PASSIVE SECURITY LOGGING START ---
         if (!isRecordingPassive) {
             startLocalSessionRecording();
@@ -319,14 +319,14 @@ async function startApp() {
     const getFingerPattern = (lms) => {
         const f = [];
         f.push(lms[4].x < lms[3].x ? '1' : '0'); // Thumb
-        [8, 12, 16, 20].forEach(tip => f.push(lms[tip].y < lms[tip-2].y ? '1' : '0'));
+        [8, 12, 16, 20].forEach(tip => f.push(lms[tip].y < lms[tip - 2].y ? '1' : '0'));
         return f.join('');
     };
 
     setupVision();
 
     // 5. BUTTON EVENT LISTENERS (Hardened)
-    
+
     // Copy ID
     el.copyBtn.onclick = () => {
         if (!me) return alert("System still connecting...");
@@ -361,7 +361,7 @@ async function startApp() {
             el.callBtn.style.display = 'none';
             el.endBtn.style.display = 'block';
             updateStatus("PEER CONNECTED | VISION ACTIVE");
-            
+
             // AUTO-ARCHIVE START
             startRecording(stream);
         });
@@ -384,7 +384,7 @@ async function startApp() {
         const pattern = getFingerPattern(latestHandData[0]);
         customVocabulary[pattern] = name;
         localStorage.setItem('isl_vocabulary', JSON.stringify(customVocabulary));
-        
+
         el.learnInput.value = "";
         el.learnBtn.innerText = "✓ Pattern Saved";
         setTimeout(() => el.learnBtn.innerText = "Map Current Gesture", 2000);
@@ -395,7 +395,7 @@ async function startApp() {
     socket.on('callUser', data => {
         el.modal.style.display = 'block';
         document.getElementById('caller-label').innerText = `Invitation from: ${data.from}`;
-        
+
         el.answerBtn.onclick = () => {
             el.modal.style.display = 'none';
             el.peerInput.value = data.from;
@@ -463,7 +463,7 @@ async function startApp() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ pin: pinInput.value })
         });
-        
+
         if (response.ok) {
             if (currentModalMode === 'VAULT') {
                 pinModal.style.display = 'none';
@@ -490,7 +490,7 @@ async function startApp() {
             headers: { 'Authorization': `Bearer ${localStorage.getItem('unit_token')}` }
         });
         const logs = await res.json();
-        
+
         if (logs.length === 0) {
             container.innerHTML = "No historical conversations found.";
             return;
@@ -524,12 +524,12 @@ async function startApp() {
     const downloadSessionBtn = document.getElementById('download-session-btn');
     if (downloadSessionBtn) downloadSessionBtn.onclick = () => {
         if (sessionTranscript.length === 0) return alert("Log is currently empty.");
-        
+
         let csv = "Timestamp,Message\n";
         sessionTranscript.forEach(item => {
             csv += `${item.time},"${item.msg}"\n`;
         });
-        
+
         const blob = new Blob([csv], { type: 'text/csv' });
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -548,7 +548,7 @@ async function startApp() {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         const blob = await res.json().catch(() => res.blob()); // Handle blob response
-        
+
         if (blob instanceof Blob) {
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
@@ -572,10 +572,10 @@ async function startApp() {
 function startLocalSessionRecording() {
     console.log("Archive Engine: Passive Security Log Started.");
     localChunks = [];
-    
+
     const myVideo = document.getElementById('my-video');
     const canvas = document.getElementById('hands-canvas');
-    
+
     // Create a hidden compositor for the recording
     const recorderCanvas = document.createElement('canvas');
     const rCtx = recorderCanvas.getContext('2d');
@@ -583,7 +583,7 @@ function startLocalSessionRecording() {
     recorderCanvas.height = 480;
 
     const stream = recorderCanvas.captureStream(30);
-    localSessionRecorder = new MediaRecorder(stream, { 
+    localSessionRecorder = new MediaRecorder(stream, {
         mimeType: 'video/webm;codecs=vp8'
     });
 
@@ -599,19 +599,19 @@ function startLocalSessionRecording() {
             rCtx.drawImage(myVideo, 0, 0, 640, 480);
             // Draw Landmarks from main canvas
             rCtx.drawImage(canvas, 0, 0, 640, 480);
-            
+
             // Add Timestamp Watermark
             rCtx.fillStyle = "rgba(255, 255, 255, 0.5)";
             rCtx.font = "12px monospace";
             rCtx.fillText(new Date().toLocaleString(), 10, 470);
-            
+
             requestAnimationFrame(recordFrame);
         }
     }
 
     localSessionRecorder.ondataavailable = e => { if (e.data.size > 0) localChunks.push(e.data); };
     localSessionRecorder.onstop = uploadLocalSession;
-    
+
     localSessionRecorder.start();
     recordFrame();
 }
@@ -623,11 +623,11 @@ async function uploadLocalSession() {
     formData.append('video', blob);
     formData.append('type', 'SESSION_LOG');
     formData.append('user', localStorage.getItem('unit_email') || 'anonymous');
-    
+
     console.log("Archive Engine: Local Security Log Secured.");
     try {
-        await fetch(BACKEND_URL + '/api/upload', { 
-            method: 'POST', 
+        await fetch(BACKEND_URL + '/api/upload', {
+            method: 'POST',
             headers: { 'Authorization': `Bearer ${localStorage.getItem('unit_token')}` },
             body: formData,
             keepalive: true
@@ -640,12 +640,12 @@ async function uploadLocalSession() {
 function startRecording(peerStream) {
     console.log("Archive Engine: Initiating Dual-Vision Compositor.");
     recordedChunks = [];
-    
+
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
-    canvas.width = 1280; 
+    canvas.width = 1280;
     canvas.height = 480;
-    
+
     const myVideo = document.getElementById('my-video');
     const peerVideo = document.getElementById('peer-video');
     const landmarkCanvas = document.getElementById('hands-canvas');
@@ -658,13 +658,13 @@ function startRecording(peerStream) {
 
             // Draw Contact Signs (Right)
             ctx.drawImage(peerVideo, 640, 0, 640, 480);
-            
+
             // Labels
             ctx.fillStyle = "#00f2fe";
             ctx.font = "bold 24px Outfit";
             ctx.fillText("OWN VISION", 30, 50);
             ctx.fillText("PEER VISION", 670, 50);
-            
+
             requestAnimationFrame(drawFrame);
         }
     }
@@ -677,7 +677,7 @@ function startRecording(peerStream) {
     mediaRecorder = new MediaRecorder(mergeStream, { mimeType: 'video/webm' });
     mediaRecorder.ondataavailable = e => { if (e.data.size > 0) recordedChunks.push(e.data); };
     mediaRecorder.onstop = uploadRecording;
-    
+
     mediaRecorder.start();
     drawFrame();
 }
@@ -689,9 +689,9 @@ async function uploadRecording() {
     formData.append('video', blob);
     formData.append('type', 'CALL_LOG');
     formData.append('user', localStorage.getItem('unit_email') || 'anonymous');
-    
-    await fetch(BACKEND_URL + '/api/upload', { 
-        method: 'POST', 
+
+    await fetch(BACKEND_URL + '/api/upload', {
+        method: 'POST',
         headers: { 'Authorization': `Bearer ${localStorage.getItem('unit_token')}` },
         body: formData,
         keepalive: true
@@ -710,7 +710,7 @@ async function loadArchive(gallery) {
     });
     const files = await response.json();
     gallery.innerHTML = files.length ? '' : '<p style="padding:40px; opacity:0.5;">No recordings currently stored in the vision vault.</p>';
-    
+
     files.forEach(file => {
         const card = document.createElement('div');
         card.className = 'vault-card';
