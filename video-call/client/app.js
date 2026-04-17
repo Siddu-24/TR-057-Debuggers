@@ -1,11 +1,13 @@
 // ============================================================
-// 🚀 DEPLOYMENT CONFIG
-// Set this to your Render backend URL after deploying.
-// Example: "https://signspeak-server.onrender.com"
-// Leave as empty string for local development (uses same origin).
+// 🚀 DEPLOYMENT CONFIG — Auto-detects Local vs Production
+// Local  → http://localhost:5000
+// Vercel → https://tr-057-debuggers.onrender.com
 // ============================================================
-const RENDER_BACKEND = "https://tr-057-debuggers.onrender.com";
-const BACKEND_URL = RENDER_BACKEND || window.location.origin;
+const BACKEND_URL =
+  window.location.hostname === "localhost" ||
+  window.location.hostname === "127.0.0.1"
+    ? "http://localhost:5000"
+    : "https://tr-057-debuggers.onrender.com";
 
 // --- IDENTITY CONTROLLER (Auth Engine) ---
 const Auth = {
