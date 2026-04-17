@@ -4,7 +4,7 @@
 // Example: "https://signspeak-server.onrender.com"
 // Leave as empty string for local development (uses same origin).
 // ============================================================
-const RENDER_BACKEND = "https://signspeak-server.onrender.com";
+const RENDER_BACKEND = "https://tr-057-debuggers.onrender.com";
 const BACKEND_URL = RENDER_BACKEND || window.location.origin;
 
 // --- IDENTITY CONTROLLER (Auth Engine) ---
@@ -258,13 +258,13 @@ async function startApp() {
     try {
         myStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
         el.myVideo.srcObject = myStream;
-        
+
         // Update HW Monitor
         const camStatus = document.getElementById('cam-status');
         const micStatus = document.getElementById('mic-status');
         if (camStatus) { camStatus.innerText = "ONLINE"; camStatus.style.color = "var(--success)"; }
         if (micStatus) { micStatus.innerText = "ONLINE"; micStatus.style.color = "var(--success)"; }
-        
+
     } catch (err) {
         console.error("Camera Error:", err);
         updateStatus("ERROR: CAMERA ACCESS DENIED", "red");
@@ -399,7 +399,7 @@ async function startApp() {
             el.peerVideo.volume = 1.0; // Ensure unmuted
             el.callBtn.style.display = 'none';
             el.endBtn.style.display = 'block';
-            
+
             const statusTag = document.getElementById('peer-status-tag');
             if (statusTag) {
                 statusTag.innerText = "Vision Active";
@@ -870,7 +870,7 @@ function setupRemoteAudioVisualization(stream) {
         function updateMeter() {
             if (!bar) return;
             analyser.getByteFrequencyData(dataArray);
-            
+
             // Calculate average volume
             let sum = 0;
             for (let i = 0; i < bufferLength; i++) {
@@ -878,13 +878,13 @@ function setupRemoteAudioVisualization(stream) {
             }
             const average = sum / bufferLength;
             const percentage = Math.min(100, (average / 128) * 100);
-            
+
             bar.style.width = percentage + '%';
-            
+
             // Pulse the container if loud
             const container = document.getElementById('peer-video-container');
             if (average > 30) {
-                container.style.borderColor = `rgba(0, 242, 254, ${0.1 + (average/128)})`;
+                container.style.borderColor = `rgba(0, 242, 254, ${0.1 + (average / 128)})`;
             } else {
                 container.style.borderColor = 'var(--glass-border)';
             }
