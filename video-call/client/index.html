@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SignSpeak AI | Flagship ISL Video Bridge</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <!-- Load scripts in order -->
+    <script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/simple-peer@9.11.1/simplepeer.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+</head>
+<body>
+    <div class="bg-glow" style="top:-10%; right:-10%;"></div>
+    <div class="bg-glow" style="bottom:-10%; left:-10%;"></div>
+
+    <!-- --- AUTH PORTAL (Identity Barrier) --- -->
+    <div id="auth-portal" style="position:fixed; inset:0; background: var(--bg-dark); z-index: 50000; display: flex; align-items:center; justify-content:center;">
+        <div class="bg-glow" style="top:20%; left:20%; opacity:0.1;"></div>
+        
+        <div class="collapsible-side pulse-border" style="width: 400px; padding: 40px; text-align: center;">
+            <div class="logo" style="margin-bottom: 30px; font-size: 2.5rem;">🖐️ SignSpeak</div>
+            
+            <!-- Login View -->
+            <div id="login-view">
+                <h3 style="margin-bottom: 25px;">Verified Access</h3>
+                <input type="email" id="login-email" placeholder="Identity Email">
+                <input type="password" id="login-pass" placeholder="Password">
+                <button id="login-btn" class="btn primary" style="width: 100%; margin-top: 10px;">Authorize Identity</button>
+                <p style="margin-top: 20px; font-size: 0.8rem; opacity: 0.6;">
+                    New here? <a href="#" id="go-to-register" style="color:var(--primary);">Register Unit</a><br>
+                    <a href="#" id="go-to-reset" style="color:var(--accent); font-size: 0.7rem;">Forget Credentials?</a>
+                </p>
+            </div>
+
+            <!-- Register View -->
+            <div id="register-view" style="display: none;">
+                <h3 style="margin-bottom: 25px;">Register Unit</h3>
+                <input type="email" id="reg-email" placeholder="Unit Email">
+                <input type="password" id="reg-pass" placeholder="Creation Password">
+                <button id="register-btn" class="btn primary" style="width: 100%; margin-top: 10px;">Initialize Unit</button>
+                <p style="margin-top: 20px; font-size: 0.8rem; opacity: 0.6;">
+                    Member? <a href="#" id="back-to-login" style="color:var(--primary);">Authorize Access</a>
+                </p>
+            </div>
+
+            <!-- Reset View -->
+            <div id="reset-view" style="display: none;">
+                <h3 style="margin-bottom: 25px;">Credential Recovery</h3>
+                <p style="font-size: 0.7rem; margin-bottom: 15px; opacity: 0.5;">Enter email to receive security code.</p>
+                <input type="email" id="reset-email" placeholder="Registered Email">
+                
+                <div id="otp-section" style="display: none;">
+                    <input type="text" id="reset-otp" placeholder="6-Digit Code" maxLength="6" style="text-align: center; letter-spacing: 5px;">
+                    <input type="password" id="reset-new-pass" placeholder="New Password">
+                </div>
+
+                <button id="send-otp-btn" class="btn outline" style="width: 100%; margin-top: 10px;">Send Verification Code</button>
+                <button id="reset-btn" class="btn primary" style="width: 100%; margin-top: 10px; display: none;">Verify & Re-initialize</button>
+                
+                <p style="margin-top: 20px; font-size: 0.8rem; opacity: 0.6;">
+                    Found them? <a href="#" id="reset-back-to-login" style="color:var(--primary);">Back to Terminal</a>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <nav class="navbar">
+        <div class="logo">🖐️ SignSpeak AI</div>
+        <div class="nav-links">
+            <a href="#studio">Learning Studio</a>
+            <a href="#call-interface" class="btn primary" style="margin-right: 15px;">Launch Portal</a>
+            <button id="logout-btn" class="btn outline" style="border-color: var(--accent); color: var(--accent); font-size: 0.7rem; padding: 8px 15px;">Logout Unit</button>
+        </div>
+    </nav>
+
+    <header class="hero">
+        <h1 class="gradient-text">Voices for the Silent.</h1>
+        <p>A flagship P2P video conferencing bridge that translates Indian Sign Language into natural speech in real-time.</p>
+        <div class="hero-btns">
+            <a href="#call-interface" class="btn primary">Start Intelligent Call</a>
+            <a href="#studio" class="btn outline">Train Custom Signs</a>
+        </div>
+    </header>
+
+    <main class="main-grid" id="call-interface">
+        <section class="video-station">
+            <div class="video-grid">
+                <div class="video-item side-a active-pulse" id="my-video-container">
+                    <video id="my-video" autoplay muted playsinline></video>
+                    <canvas id="hands-canvas" style="position:absolute; top:0; left:0; width:100%; height:100%; pointer-events: none;"></canvas>
+                    <div class="side-label">You (Signer)</div>
+                </div>
+                <div class="video-item side-b">
+                    <video id="peer-video" autoplay playsinline></video>
+                    <div class="side-label">Contact (Receiver)</div>
+                </div>
+            </div>
+            
+            <div id="translation-bar">
+                <span id="output-text">Initializing Secure Engine...</span>
+            </div>
+        </section>
+
+        <aside class="collapsible-side">
+            <div class="control-group">
+                <h3>Terminal Identity</h3>
+                <p id="my-id-display" style="font-size: 0.82rem; opacity: 0.6; margin-bottom: 15px; word-break: break-all;">Status: Not Connected</p>
+                <button id="copy-link-btn" class="btn outline" style="width: 100%;">Copy Invitation Link</button>
+            </div>
+
+            <div class="control-group">
+                <h3>Intelligence Log</h3>
+                <div id="transcript-container" style="height: 150px; overflow-y: auto; background: rgba(0,0,0,0.2); border-radius: 12px; padding: 10px; font-size: 0.75rem; border: 1px solid var(--glass-border); margin-bottom: 10px;">
+                    <!-- Live Transcripts will flow here -->
+                </div>
+                <div style="display: flex; gap: 8px;">
+                    <button id="view-history-btn" class="btn outline" style="flex: 2; font-size: 0.7rem;">View History</button>
+                    <button id="download-session-btn" class="btn outline" style="flex: 1; font-size: 0.7rem; border-color: var(--primary);">💾 CSV</button>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <h3>Direct Connection</h3>
+                <input type="text" id="peer-id-input" placeholder="Paste Contact ID Here">
+                <button id="call-btn" class="btn primary" style="width: 100%;">Connect to Contact</button>
+                <button id="end-btn" class="btn outline" style="width: 100%; display:none; background: #ff007a; border:none;">End Connection</button>
+            </div>
+
+            <div class="control-group" id="studio">
+                <h3>Sign Studio</h3>
+                <input type="text" id="new-sign-name" placeholder="Sign Name (e.g. NAMASTE)">
+                <button id="learn-btn" class="btn outline" style="width: 100%;">Map Current Gesture</button>
+            </div>
+
+            <div class="control-group">
+                <h3>System Preferences</h3>
+                <label style="display: flex; align-items: center; gap: 12px; cursor:pointer; font-size: 0.85rem; margin-bottom: 10px;">
+                    <input type="checkbox" id="voice-toggle" checked style="width: auto; margin:0;"> 
+                    Voice Synthesis
+                </label>
+                <button id="finalize-btn" class="btn primary" style="width: 100%; background: #ff007a; border:none; color:#fff;">Finalize session</button>
+            </div>
+        </aside>
+    </main>
+
+    <!-- --- VISION VAULT DASHBOARD (Dedicated Section) --- -->
+    <section id="archive-section" class="vault-dashboard">
+        <div class="vault-header">
+            <div>
+                <h2 style="color: #fff;">Vision Archive Portal</h2>
+                <p style="opacity: 0.6; font-size: 0.9rem;">Secured retrieval point for historical ISL vision logs.</p>
+            </div>
+            <button id="close-vault-btn" class="btn outline" style="border:none; opacity:0.5;">Close Terminal</button>
+        </div>
+
+        <div id="recordings-gallery" class="vault-grid">
+            <!-- Dynamic Vault Cards will be injected here -->
+        </div>
+    </section>
+
+    <!-- Admin Access Link -->
+    <div style="text-align: center; margin-bottom: 80px;" id="access-trigger">
+        <button id="open-archive-btn" class="btn outline" style="font-size: 0.75rem; opacity: 0.6; letter-spacing: 1px;">
+            <i class="fas fa-lock"></i> ACCESS SECURE ARCHIVE
+        </button>
+    </div>
+
+    <!-- PIN Modal -->
+    <div id="pin-modal" style="display:none; position:fixed; inset:0; background: rgba(0,0,0,0.9); z-index: 20000; align-items:center; justify-content:center;">
+        <div class="collapsible-side pulse-border" style="width: 400px; text-align: center;">
+            <h3 style="margin-bottom: 20px;" id="modal-title">Verification Required</h3>
+            
+            <div id="pin-input-group">
+                <input type="password" id="admin-pin" placeholder="Enter Admin PIN" maxLength="4" style="text-align: center; font-size: 1.5rem; letter-spacing: 10px;">
+                <button id="verify-btn" class="btn primary" style="width: 100%; margin-top: 10px;">Unlock Branch</button>
+            </div>
+
+            <div id="history-viewer" style="display: none; text-align: left;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <span style="font-size: 0.7rem; opacity: 0.6;">All recorded vision data</span>
+                    <button id="download-all-btn" class="btn primary" style="font-size: 0.65rem; padding: 5px 12px;">Export Global CSV</button>
+                </div>
+                <div id="history-content" style="max-height: 400px; overflow-y: auto; margin-bottom: 20px; font-size: 0.85rem; padding: 10px; background: rgba(0,0,0,0.3); border-radius: 15px;">
+                    <!-- History logs -->
+                </div>
+            </div>
+
+            <button id="close-pin-btn" class="btn outline" style="width: 100%; margin-top: 10px; border:none;">Close Portal</button>
+        </div>
+    </div>
+
+    <!-- Handshake Notification Modal -->
+    <div id="call-modal" style="display:none; position:fixed; top:30px; right:30px; background: rgba(10,11,16,0.98); border: 1px solid #00f2fe; padding: 25px; border-radius: 20px; z-index: 10000; box-shadow: 0 10px 50px rgba(0,0,0,0.8); backdrop-filter: blur(20px);">
+        <p id="caller-label" style="margin-bottom: 20px; font-weight: 600; color: #fff;">Incoming Vision Request...</p>
+        <div style="display: flex; gap: 10px;">
+            <button id="answer-btn" class="btn primary">Accept Call</button>
+            <button id="reject-btn" class="btn outline">Decline</button>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
