@@ -1,43 +1,41 @@
-# ASTRA Sign AI: Vision Mode
+# ASTRA Sign AI
 
-**ASTRA Sign AI** is a web-based, real-time sign language translator that utilizes webcam hand gesture recognition to instantly convert signs into text and synthesized speech. No specialized hardware or gloves are needed!
+ASTRA Sign AI (also known as SignSpeak AI) is a comprehensive web-based sign language translator platform. It leverages state-of-the-art hand gesture recognition via webcam to instantly convert sign language into both text and speech in real time. 
 
 ## Features
 
-- **Real-Time Translation**: Uses advanced computer vision (MediaPipe/OpenCV) to detect hand landmarks and match them with predefined signs.
-- **Voice Synthesis**: Automatically speaks out translated words using `pyttsx3`, enabling seamless communication.
-- **Secure Archive & Vision Vault**: Capable of saving camera session logs visually as MP4 files inside a secure, PIN-protected archive accessible directly from the app interface.
-- **Web App Ready**: Powered by Streamlit for a fast, responsive, and beautiful user interface.
-- **Fallback Simulation Mode**: Gracefully handles missing detection dependencies for broader compatibility.
+- **Real-Time Vision Translator**: Translates sign language through the webcam with zero latency using advanced AI algorithms (MediaPipe).
+- **Voice Synthesis**: Automatically speaks out the detected signs using Text-To-Speech (pyttsx3).
+- **Secure Archive & Vault**: Automatically logs and archives your communication sessions safely locally.
+- **WebRTC Video Calls**: Includes a P2P signaling server for hosting sign-language integrated video calls.
+- **Dual-Hand Tracking**: Advanced gesture recognition handling single and dual-hand signs.
 
-## Tech Stack
+## Project Structure
 
-- **Python 3**
-- **Streamlit** (Frontend/Web Server)
-- **OpenCV** (Camera Feed & Video Writing)
-- **MediaPipe** (Hand Landmark Detection)
-- **Pyttsx3** (Text-to-Speech)
+- `app.py`: The main Vision Mode execution script. Runs the offline/fallback translation using OpenCV and MediaPipe.
+- `video-call/`: The WebRTC Sign Language AI integration platform. 
+  - `server/`: Node.js signaling server.
+  - `client/`: Web interface for video calls.
+- `dataset/`: Training Data and YOLO/MediaPipe markers.
+- `training/`: AI model training scripts and data preparation for custom models.
 
-## Setup & Installation
+## How to Run
 
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/Siddu-24/TR-057-Debuggers.git
-   cd TR-057-Debuggers
-   ```
+**1. Vision Translator (Local UI)**
+```bash
+pip install -r requirements.txt
+streamlit run app.py
+```
 
-2. Install the necessary dependencies:
-   ```bash
-   pip install streamlit opencv-python mediapipe pyttsx3 Pillow numpy
-   ```
+**2. Video Call Web Application**
+```bash
+# Terminal 1: Start the signaling server
+cd video-call/server
+npm install
+npm start
 
-3. Run the application:
-   ```bash
-   streamlit run app.py
-   ```
-
-## Usage
-- Open the provided Streamlit local URL.
-- Toggle the **"Turn On Camera"** option.
-- Perform signs in front of the camera (e.g., "Hello", "Peace", "Thank You", "I Love You", "Stop", depending on the mappings).
-- The detected word will automatically be translated onscreen and voiced aloud!
+# Terminal 2: Run the frontend
+# You can serve the 'client' directory using any HTTP server:
+cd video-call/client
+npx serve . 
+```
