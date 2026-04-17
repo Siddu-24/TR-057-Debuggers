@@ -72,10 +72,10 @@ const Auth = {
         let endpoint, body;
         if (type === 'register') {
             endpoint = '/api/auth/register';
-            body = { email: document.getElementById('reg-email').value, password: document.getElementById('reg-pass').value };
+            body = { email: document.getElementById('reg-email').value.trim().toLowerCase(), password: document.getElementById('reg-pass').value };
         } else if (type === 'login') {
             endpoint = '/api/auth/login';
-            body = { email: document.getElementById('login-email').value, password: document.getElementById('login-pass').value };
+            body = { email: document.getElementById('login-email').value.trim().toLowerCase(), password: document.getElementById('login-pass').value };
         } else {
             endpoint = '/api/auth/reset';
             body = {
