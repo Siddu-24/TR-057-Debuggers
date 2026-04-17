@@ -230,17 +230,57 @@ const io = socketIo(server, {
     }
 });
 
+// Map to track active users: email -> socketId
+const activeUsers = new Map();
+
 io.on('connection', (socket) => {
+    console.log("New Terminal Connection:", socket.id);
     socket.emit("me", socket.id);
-    socket.on("callUser", (data) => {
-        io.to(data.to).emit("callUser", { signalData: data.signalData, from: data.from });
+
+    // Register socket with email
+    socket.on("register-identity", (email) => {
+        if (email) {
+            activeUsers.set(email, socket.id);
+            console.log(`Unit Registered: ${email} -> ${socket.id}`);
+            // Broadcast active list (optional, but good for UX)
+            io.emit("active-units", Array.from(activeUsers.keys()));
+        }
     });
+
+    socket.on("disconnect", () => {
+        // Find and remove the user from active map
+        for (let [email, id] of activeUsers.entries()) {
+            if (id === socket.id) {
+                activeUsers.delete(email);
+                console.log(`Unit Offline: ${email}`);
+                io.emit("active-units", Array.from(activeUsers.keys()));
+                break;
+            }
+        }
+    });
+
+    socket.on("callUser", (data) => {
+        // Resolve target socket ID (data.to could be an email or a socketId)
+        const targetId = activeUsers.get(data.to) || data.to;
+        io.to(targetId).emit("callUser", { 
+            signalData: data.signalData, 
+            from: data.from, 
+            fromEmail: data.fromEmail 
+        });
+    });
+
     socket.on("answerCall", (data) => {
-        io.to(data.to).emit("callAccepted", data.signalData);
+        const targetId = activeUsers.get(data.to) || data.to;
+        io.to(targetId).emit("callAccepted", data.signalData);
     });
     socket.on("sendTranslation", (data) => {
-        if (data.to) io.to(data.to).emit("receiveTranslation", data);
-        else socket.broadcast.emit("receiveTranslation", data);
+        // Resolve target socket ID if an email was provided
+        const targetId = activeUsers.get(data.to) || data.to;
+        if (targetId) {
+            io.to(targetId).emit("receiveTranslation", data);
+        } else {
+            socket.broadcast.emit("receiveTranslation", data);
+        }
     });
 });
 

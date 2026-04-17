@@ -93,22 +93,42 @@
                     <canvas id="hands-canvas" style="position:absolute; top:0; left:0; width:100%; height:100%; pointer-events: none;"></canvas>
                     <div class="side-label">You (Signer)</div>
                 </div>
-                <div class="video-item side-b">
+                <div class="video-item side-b" id="peer-video-container">
                     <video id="peer-video" autoplay playsinline></video>
                     <div class="side-label">Contact (Receiver)</div>
+                    <div class="audio-meter">
+                        <div id="peer-audio-bar" class="audio-bar"></div>
+                    </div>
+                    <div id="peer-status-tag" class="status-tag">Connecting...</div>
                 </div>
             </div>
             
             <div id="translation-bar">
                 <span id="output-text">Initializing Secure Engine...</span>
             </div>
+
+            <div class="media-controls">
+                <button id="toggle-mic" class="control-btn active" title="Toggle Microphone">🎤</button>
+                <button id="toggle-video" class="control-btn active" title="Toggle Camera">📹</button>
+                <button id="toggle-fullscreen" class="control-btn" title="Fullscreen Peer">⛶</button>
+            </div>
         </section>
 
         <aside class="collapsible-side">
             <div class="control-group">
                 <h3>Terminal Identity</h3>
+                <p id="unit-email-display" style="font-size: 0.75rem; color: var(--primary); margin-bottom: 5px; font-weight: 600;"></p>
                 <p id="my-id-display" style="font-size: 0.82rem; opacity: 0.6; margin-bottom: 15px; word-break: break-all;">Status: Not Connected</p>
                 <button id="copy-link-btn" class="btn outline" style="width: 100%;">Copy Invitation Link</button>
+                
+                <div id="hw-monitor" style="margin-top: 15px; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 10px; font-size: 0.65rem; border: 1px solid var(--glass-border);">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                        <span>CAM STATUS:</span> <span id="cam-status" style="color: var(--accent);">OFFLINE</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between;">
+                        <span>MIC STATUS:</span> <span id="mic-status" style="color: var(--accent);">OFFLINE</span>
+                    </div>
+                </div>
             </div>
 
             <div class="control-group">
@@ -133,6 +153,13 @@
                 <h3>Sign Studio</h3>
                 <input type="text" id="new-sign-name" placeholder="Sign Name (e.g. NAMASTE)">
                 <button id="learn-btn" class="btn outline" style="width: 100%;">Map Current Gesture</button>
+                
+                <div id="vocab-gallery" style="margin-top: 15px; max-height: 120px; overflow-y: auto; background: rgba(0,0,0,0.1); border-radius: 10px; padding: 8px;">
+                    <p style="font-size: 0.6rem; opacity: 0.5; margin-bottom: 5px; text-transform: uppercase;">Learned Vocabulary</p>
+                    <div id="vocab-list" style="display: flex; flex-wrap: wrap; gap: 5px;">
+                        <!-- Custom signs will appear here as badges -->
+                    </div>
+                </div>
             </div>
 
             <div class="control-group">

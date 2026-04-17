@@ -1,6 +1,4 @@
-const BACKEND_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-    ? 'http://localhost:5000'
-    : 'https://tr-057-debuggers.onrender.com'; // REPLACE THIS LATER
+const BACKEND_URL = window.location.origin;
 
 // --- IDENTITY CONTROLLER (Auth Engine) ---
 const Auth = {
@@ -213,6 +211,7 @@ async function startApp() {
         peerVideo: document.getElementById('peer-video'),
         canvas: document.getElementById('hands-canvas'),
         idDisplay: document.getElementById('my-id-display'),
+        emailDisplay: document.getElementById('unit-email-display'),
         copyBtn: document.getElementById('copy-link-btn'),
         callBtn: document.getElementById('call-btn'),
         endBtn: document.getElementById('end-btn'),
@@ -221,7 +220,10 @@ async function startApp() {
         learnInput: document.getElementById('new-sign-name'),
         modal: document.getElementById('call-modal'),
         answerBtn: document.getElementById('answer-btn'),
-        rejectBtn: document.getElementById('reject-btn')
+        rejectBtn: document.getElementById('reject-btn'),
+        toggleMic: document.getElementById('toggle-mic'),
+        toggleVideo: document.getElementById('toggle-video'),
+        toggleFS: document.getElementById('toggle-fullscreen')
     };
 
     // 2. Peer & Socket Setup
@@ -232,6 +234,11 @@ async function startApp() {
         socket.on('connect', () => console.log("Connected to Signaling Engine"));
         socket.on('me', id => {
             me = id;
+            const email = localStorage.getItem('unit_email');
+            if (email) {
+                el.emailDisplay.innerText = `Unit: ${email}`;
+                socket.emit("register-identity", email);
+            }
             el.idDisplay.innerText = `Identity ID: ${id}`;
             updateStatus("System Live. Waiting for Gesture...");
         });
@@ -244,6 +251,13 @@ async function startApp() {
     try {
         myStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
         el.myVideo.srcObject = myStream;
+        
+        // Update HW Monitor
+        const camStatus = document.getElementById('cam-status');
+        const micStatus = document.getElementById('mic-status');
+        if (camStatus) { camStatus.innerText = "ONLINE"; camStatus.style.color = "var(--success)"; }
+        if (micStatus) { micStatus.innerText = "ONLINE"; micStatus.style.color = "var(--success)"; }
+        
     } catch (err) {
         console.error("Camera Error:", err);
         updateStatus("ERROR: CAMERA ACCESS DENIED", "red");
@@ -324,14 +338,29 @@ async function startApp() {
     };
 
     setupVision();
+    renderVocabGallery();
+
+    function renderVocabGallery() {
+        const list = document.getElementById('vocab-list');
+        if (!list) return;
+        list.innerHTML = "";
+        Object.values(customVocabulary).forEach(val => {
+            const badge = document.createElement('span');
+            badge.className = 'badge session';
+            badge.style.fontSize = '0.5rem';
+            badge.innerText = val;
+            list.appendChild(badge);
+        });
+    }
 
     // 5. BUTTON EVENT LISTENERS (Hardened)
 
-    // Copy ID
+    // Copy ID (Prefers Email for better UX)
     el.copyBtn.onclick = () => {
-        if (!me) return alert("System still connecting...");
-        navigator.clipboard.writeText(me);
-        el.copyBtn.innerText = "✓ Copied ID";
+        const identifier = localStorage.getItem('unit_email') || me;
+        if (!identifier) return alert("System still connecting...");
+        navigator.clipboard.writeText(identifier);
+        el.copyBtn.innerText = "✓ Copied Identity";
         el.copyBtn.style.color = "#00ff88";
         setTimeout(() => {
             el.copyBtn.innerText = "Copy Invitation Link";
@@ -352,21 +381,51 @@ async function startApp() {
             socket.emit(isHost ? 'callUser' : 'answerCall', {
                 to: targetId,
                 signalData: data,
-                from: me
+                from: me,
+                fromEmail: localStorage.getItem('unit_email')
             });
         });
 
         peer.on('stream', stream => {
+            console.log("Remote Stream Received:", stream);
             el.peerVideo.srcObject = stream;
+            el.peerVideo.volume = 1.0; // Ensure unmuted
             el.callBtn.style.display = 'none';
             el.endBtn.style.display = 'block';
+            
+            const statusTag = document.getElementById('peer-status-tag');
+            if (statusTag) {
+                statusTag.innerText = "Vision Active";
+                statusTag.style.background = "rgba(0, 255, 136, 0.2)";
+                statusTag.style.borderColor = "var(--success)";
+                statusTag.style.color = "var(--success)";
+            }
+
             updateStatus("PEER CONNECTED | VISION ACTIVE");
+
+            // Visualize Remote Audio
+            setupRemoteAudioVisualization(stream);
 
             // AUTO-ARCHIVE START
             startRecording(stream);
         });
 
-        peer.on('error', err => console.error("Peer Error:", err));
+        peer.on('close', () => {
+            console.log("Peer connection closed");
+            updateStatus("CONNECTION TERMINATED", "red");
+            const statusTag = document.getElementById('peer-status-tag');
+            if (statusTag) {
+                statusTag.innerText = "Disconnected";
+                statusTag.style.borderColor = "var(--accent)";
+                statusTag.style.color = "var(--accent)";
+            }
+            setTimeout(() => location.reload(), 2000);
+        });
+
+        peer.on('error', err => {
+            console.error("Peer Error:", err);
+            updateStatus("CONNECTION ERROR", "red");
+        });
     };
 
     el.callBtn.onclick = () => {
@@ -384,6 +443,7 @@ async function startApp() {
         const pattern = getFingerPattern(latestHandData[0]);
         customVocabulary[pattern] = name;
         localStorage.setItem('isl_vocabulary', JSON.stringify(customVocabulary));
+        renderVocabGallery();
 
         el.learnInput.value = "";
         el.learnBtn.innerText = "✓ Pattern Saved";
@@ -394,7 +454,8 @@ async function startApp() {
     // Socket Signal Listeners
     socket.on('callUser', data => {
         el.modal.style.display = 'block';
-        document.getElementById('caller-label').innerText = `Invitation from: ${data.from}`;
+        const callerName = data.fromEmail || data.from;
+        document.getElementById('caller-label').innerText = `Invitation from: ${callerName}`;
 
         el.answerBtn.onclick = () => {
             el.modal.style.display = 'none';
@@ -422,6 +483,37 @@ async function startApp() {
         setTimeout(() => location.reload(), 1000);
     };
 
+    // Media Toggles
+    el.toggleMic.onclick = () => {
+        const audioTrack = myStream.getAudioTracks()[0];
+        if (audioTrack) {
+            audioTrack.enabled = !audioTrack.enabled;
+            el.toggleMic.classList.toggle('active');
+            el.toggleMic.classList.toggle('disabled');
+            el.toggleMic.innerText = audioTrack.enabled ? '🎤' : '🔇';
+        }
+    };
+
+    el.toggleVideo.onclick = () => {
+        const videoTrack = myStream.getVideoTracks()[0];
+        if (videoTrack) {
+            videoTrack.enabled = !videoTrack.enabled;
+            el.toggleVideo.classList.toggle('active');
+            el.toggleVideo.classList.toggle('disabled');
+            el.toggleVideo.innerText = videoTrack.enabled ? '📹' : '🚫';
+        }
+    };
+
+    el.toggleFS.onclick = () => {
+        if (!document.fullscreenElement) {
+            el.peerVideo.requestFullscreen().catch(err => {
+                alert(`Error attempting to enable full-screen mode: ${err.message}`);
+            });
+        } else {
+            document.exitFullscreen();
+        }
+    };
+
     // --- ARCHIVE PANEL LOGIC ---
     const verifyBtn = document.getElementById('verify-btn');
     const closePinBtn = document.getElementById('close-pin-btn');
@@ -434,9 +526,12 @@ async function startApp() {
     const modalTitle = document.getElementById('modal-title');
     const historyContent = document.getElementById('history-content');
 
+    const openArchiveBtn = document.getElementById('open-archive-btn');
+    const pinModal = document.getElementById('pin-modal');
+
     let currentModalMode = 'VAULT'; // 'VAULT' or 'HISTORY'
 
-    if (archiveBtn) archiveBtn.onclick = () => {
+    if (openArchiveBtn) openArchiveBtn.onclick = () => {
         currentModalMode = 'VAULT';
         modalTitle.innerText = "Vault Clearance Required";
         pinInputGroup.style.display = 'block';
@@ -744,6 +839,54 @@ async function deleteRecording(filename) {
         loadArchive(document.getElementById('recordings-gallery'));
     } else {
         alert("Purge failed. Insufficient Clearance.");
+    }
+}
+
+// --- REMOTE AUDIO ANALYZER ---
+function setupRemoteAudioVisualization(stream) {
+    if (!stream.getAudioTracks().length) {
+        console.warn("No remote audio track found.");
+        return;
+    }
+
+    try {
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const source = audioContext.createMediaStreamSource(stream);
+        const analyser = audioContext.createAnalyser();
+        analyser.fftSize = 256;
+        source.connect(analyser);
+
+        const bufferLength = analyser.frequencyBinCount;
+        const dataArray = new Uint8Array(bufferLength);
+        const bar = document.getElementById('peer-audio-bar');
+
+        function updateMeter() {
+            if (!bar) return;
+            analyser.getByteFrequencyData(dataArray);
+            
+            // Calculate average volume
+            let sum = 0;
+            for (let i = 0; i < bufferLength; i++) {
+                sum += dataArray[i];
+            }
+            const average = sum / bufferLength;
+            const percentage = Math.min(100, (average / 128) * 100);
+            
+            bar.style.width = percentage + '%';
+            
+            // Pulse the container if loud
+            const container = document.getElementById('peer-video-container');
+            if (average > 30) {
+                container.style.borderColor = `rgba(0, 242, 254, ${0.1 + (average/128)})`;
+            } else {
+                container.style.borderColor = 'var(--glass-border)';
+            }
+
+            requestAnimationFrame(updateMeter);
+        }
+        updateMeter();
+    } catch (e) {
+        console.error("Audio Visualization Error:", e);
     }
 }
 
