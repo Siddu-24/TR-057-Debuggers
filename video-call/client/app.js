@@ -1,3 +1,7 @@
+const BACKEND_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
+    ? 'http://localhost:5000' 
+    : 'https://signspeak-server.onrender.com'; // REPLACE THIS LATER
+
 // --- IDENTITY CONTROLLER (Auth Engine) ---
 const Auth = {
     portal: document.getElementById('auth-portal'),
@@ -26,7 +30,7 @@ const Auth = {
             const email = document.getElementById('reset-email').value;
             if (!email) return alert("Please specify the unit email.");
             
-            const res = await fetch('/api/auth/request-reset', {
+            const res = await fetch(BACKEND_URL + '/api/auth/request-reset', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email })
@@ -82,7 +86,7 @@ const Auth = {
         }
 
         try {
-            const res = await fetch(endpoint, {
+            const res = await fetch(BACKEND_URL + endpoint, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(body)
@@ -189,7 +193,7 @@ async function saveTranscriptToServer(message) {
     const token = localStorage.getItem('unit_token');
     if (!token) return;
     
-    await fetch('/api/transcripts', {
+    await fetch(BACKEND_URL + '/api/transcripts', {
         method: 'POST',
         headers: { 
             'Content-Type': 'application/json',
@@ -223,7 +227,7 @@ async function startApp() {
     // 2. Peer & Socket Setup
     try {
         if (!socket) {
-            socket = io(); // Connect to the same origin
+            socket = io(BACKEND_URL); // Connect to Backend
         }
         socket.on('connect', () => console.log("Connected to Signaling Engine"));
         socket.on('me', id => {
@@ -454,7 +458,7 @@ async function startApp() {
     };
 
     if (verifyBtn) verifyBtn.onclick = async () => {
-        const response = await fetch('/api/verify', {
+        const response = await fetch(BACKEND_URL + '/api/verify', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ pin: pinInput.value })
@@ -482,7 +486,7 @@ async function startApp() {
 
     async function loadGlobalHistory(container) {
         container.innerHTML = "Fetching secure logs...";
-        const res = await fetch('/api/transcripts', {
+        const res = await fetch(BACKEND_URL + '/api/transcripts', {
             headers: { 'Authorization': `Bearer ${localStorage.getItem('unit_token')}` }
         });
         const logs = await res.json();
@@ -540,7 +544,7 @@ async function startApp() {
     const downloadAllBtn = document.getElementById('download-all-btn');
     if (downloadAllBtn) downloadAllBtn.onclick = async () => {
         const token = localStorage.getItem('unit_token');
-        const res = await fetch('/api/transcripts/export', {
+        const res = await fetch(BACKEND_URL + '/api/transcripts/export', {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         const blob = await res.json().catch(() => res.blob()); // Handle blob response
@@ -622,7 +626,7 @@ async function uploadLocalSession() {
     
     console.log("Archive Engine: Local Security Log Secured.");
     try {
-        await fetch('/api/upload', { 
+        await fetch(BACKEND_URL + '/api/upload', { 
             method: 'POST', 
             headers: { 'Authorization': `Bearer ${localStorage.getItem('unit_token')}` },
             body: formData,
@@ -686,7 +690,7 @@ async function uploadRecording() {
     formData.append('type', 'CALL_LOG');
     formData.append('user', localStorage.getItem('unit_email') || 'anonymous');
     
-    await fetch('/api/upload', { 
+    await fetch(BACKEND_URL + '/api/upload', { 
         method: 'POST', 
         headers: { 'Authorization': `Bearer ${localStorage.getItem('unit_token')}` },
         body: formData,
@@ -701,7 +705,7 @@ window.onbeforeunload = () => {
 };
 
 async function loadArchive(gallery) {
-    const response = await fetch('/api/recordings', {
+    const response = await fetch(BACKEND_URL + '/api/recordings', {
         headers: { 'Authorization': `Bearer ${localStorage.getItem('unit_token')}` }
     });
     const files = await response.json();
@@ -715,13 +719,13 @@ async function loadArchive(gallery) {
                 <span class="badge ${file.name.startsWith('CALL') ? 'call' : 'session'}">${file.name.split('_')[0]}</span>
                 <button class="delete-btn" onclick="deleteRecording('${file.name}')">×</button>
             </div>
-            <video src="${file.url}" preload="metadata"></video>
+            <video src="${BACKEND_URL}${file.url}" preload="metadata"></video>
             <div class="vault-card-content">
                 <h4>VISION LOG: ${file.name.split('_')[1].substring(0, 8)}</h4>
                 <p>Captured: ${file.date}</p>
                 <div class="vault-btn-group">
-                    <a href="${file.url}" download class="btn primary" style="flex:1">DOWNLOAD</a>
-                    <button class="btn outline" onclick="window.open('${file.url}', '_blank')" style="flex:1">EXPAND</button>
+                    <a href="${BACKEND_URL}${file.url}" download class="btn primary" style="flex:1">DOWNLOAD</a>
+                    <button class="btn outline" onclick="window.open('${BACKEND_URL}${file.url}', '_blank')" style="flex:1">EXPAND</button>
                 </div>
             </div>
         `;
@@ -731,7 +735,7 @@ async function loadArchive(gallery) {
 
 async function deleteRecording(filename) {
     if (!confirm("Are you sure you want to purge this vision log?")) return;
-    const res = await fetch(`/api/recordings/${filename}`, {
+    const res = await fetch(`${BACKEND_URL}/api/recordings/${filename}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${localStorage.getItem('unit_token')}` }
     });
