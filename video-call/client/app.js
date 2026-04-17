@@ -1,4 +1,11 @@
-const BACKEND_URL = window.location.origin;
+// ============================================================
+// 🚀 DEPLOYMENT CONFIG
+// Set this to your Render backend URL after deploying.
+// Example: "https://signspeak-server.onrender.com"
+// Leave as empty string for local development (uses same origin).
+// ============================================================
+const RENDER_BACKEND = "https://signspeak-server.onrender.com";
+const BACKEND_URL = RENDER_BACKEND || window.location.origin;
 
 // --- IDENTITY CONTROLLER (Auth Engine) ---
 const Auth = {
